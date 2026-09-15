@@ -1,0 +1,25 @@
+project_id = "mebsbstwswksajeuaygp"
+
+[functions.health-chat]
+verify_jwt = false
+
+[functions.symptom-summary]
+verify_jwt = false
+
+[functions.analyze-medical-image]
+verify_jwt = false
+
+[functions.generate-health-insights]
+verify_jwt = false
+
+[functions.wearable-oauth]
+verify_jwt = false
+
+[functions.wearable-sync]
+verify_jwt = false
+
+[functions.check-drug-interactions]
+verify_jwt = false
+
+[functions.scan-prescription]
+verify_jwt = false
