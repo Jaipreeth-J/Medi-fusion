@@ -1,0 +1,30 @@
+{
+  "appId": "app.lovable.669fda9757b149d2bfb1034f26506105",
+  "appName": "medi-fusion",
+  "webDir": "dist",
+  "server": {
+    "url": "https://669fda97-57b1-49d2-bfb1-034f26506105.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#0a0a0b",
+      "showSpinner": true,
+      "spinnerColor": "#14b8a6"
+    },
+    "StatusBar": {
+      "style": "Dark",
+      "backgroundColor": "#0a0a0b"
+    },
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  },
+  "ios": {
+    "contentInset": "automatic"
+  },
+  "android": {
+    "backgroundColor": "#0a0a0b"
+  }
+}
