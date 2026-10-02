@@ -156,17 +156,31 @@ serve(async (req) => {
     // ── TOKEN REFRESH ──
     if (action === 'refresh') {
       const { data: conn } = await supabase
-        .from('wearable_connections').select('*')
+        .from('wearable_connections').select('id, user_id, provider')
         .eq('user_id', user.id).eq('provider', provider).single();
 
-      if (!conn?.refresh_token) {
+      if (!conn) {
+        return new Response(
+          JSON.stringify({ error: 'Connection not found.' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Securely fetch refresh token using service role adminClient
+      const { data: tokenRecord } = await adminClient
+        .from('wearable_tokens')
+        .select('refresh_token')
+        .eq('connection_id', conn.id)
+        .maybeSingle();
+
+      if (!tokenRecord?.refresh_token) {
         return new Response(
           JSON.stringify({ error: 'No refresh token available. Please reconnect.' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      const tokens = await refreshAccessToken(provider, conn.refresh_token, clientId, clientSecret, providerConfig.tokenUrl);
+      const tokens = await refreshAccessToken(provider, tokenRecord.refresh_token, clientId, clientSecret, providerConfig.tokenUrl);
       if (!tokens) {
         // Mark connection as inactive so user knows to reconnect
         await supabase.from('wearable_connections')
@@ -181,14 +195,24 @@ serve(async (req) => {
         ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
         : null;
 
+      // Update public connection metadata
       await supabase.from('wearable_connections').update({
-        access_token: tokens.access_token,
-        ...(tokens.refresh_token && { refresh_token: tokens.refresh_token }),
         token_expires_at: expiresAt,
+        is_active: true,
       }).eq('id', conn.id);
 
+      // Securely store updated tokens in wearable_tokens table
+      await adminClient.from('wearable_tokens').upsert({
+        connection_id: conn.id,
+        user_id: user.id,
+        access_token: tokens.access_token,
+        ...(tokens.refresh_token && { refresh_token: tokens.refresh_token }),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'connection_id' });
+
+      // Return status only, never leak tokens to the client
       return new Response(
-        JSON.stringify({ success: true, access_token: tokens.access_token }),
+        JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -276,11 +300,10 @@ serve(async (req) => {
         ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
         : null;
 
+      // Update connection metadata in wearable_connections (no sensitive tokens stored here)
       const { data, error } = await supabase
         .from('wearable_connections')
         .update({
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
           token_expires_at: expiresAt,
           provider_user_id: tokens.user_id || null,
           is_active: true,
@@ -288,14 +311,27 @@ serve(async (req) => {
         })
         .eq('user_id', user.id)
         .eq('provider', provider)
-        .select()
+        .select('id, user_id, provider, provider_user_id, token_expires_at, device_info, is_active, created_at, updated_at')
         .single();
 
-      if (error) {
+      if (error || !data) {
         return new Response(
           JSON.stringify({ error: 'Failed to save connection' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+      }
+
+      // Securely store access & refresh tokens in wearable_tokens via adminClient
+      const { error: tokenError } = await adminClient.from('wearable_tokens').upsert({
+        connection_id: data.id,
+        user_id: user.id,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'connection_id' });
+
+      if (tokenError) {
+        console.error('Failed to store wearable tokens securely:', tokenError);
       }
 
       return new Response(

@@ -117,9 +117,14 @@ export default function Chat() {
         throw response.error;
       }
 
+      const isEmergencyResponse = Boolean(isEmergency || response.data?.isEmergency);
+      if (isEmergencyResponse) {
+        setShowEmergency(true);
+      }
+
       const assistantContent = response.data?.content || "I'm here to help. How can I assist you with your health questions today?";
 
-      await saveAssistantMessage(convId, assistantContent, isEmergency);
+      await saveAssistantMessage(convId, assistantContent, isEmergencyResponse);
 
       if (isFirstMessage) {
         await updateTitle(convId, content);

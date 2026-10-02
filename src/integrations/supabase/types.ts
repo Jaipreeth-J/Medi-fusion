@@ -661,7 +661,6 @@ export type Database = {
       }
       wearable_connections: {
         Row: {
-          access_token: string | null
           created_at: string
           device_info: Json | null
           id: string
@@ -669,14 +668,12 @@ export type Database = {
           last_sync_at: string | null
           provider: string
           provider_user_id: string | null
-          refresh_token: string | null
           scopes: string[] | null
           token_expires_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          access_token?: string | null
           created_at?: string
           device_info?: Json | null
           id?: string
@@ -684,14 +681,12 @@ export type Database = {
           last_sync_at?: string | null
           provider: string
           provider_user_id?: string | null
-          refresh_token?: string | null
           scopes?: string[] | null
           token_expires_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          access_token?: string | null
           created_at?: string
           device_info?: Json | null
           id?: string
@@ -699,13 +694,50 @@ export type Database = {
           last_sync_at?: string | null
           provider?: string
           provider_user_id?: string | null
-          refresh_token?: string | null
           scopes?: string[] | null
           token_expires_at?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      wearable_tokens: {
+        Row: {
+          access_token: string | null
+          connection_id: string
+          created_at: string
+          id: string
+          refresh_token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          connection_id: string
+          created_at?: string
+          id?: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          connection_id?: string
+          created_at?: string
+          id?: string
+          refresh_token?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wearable_tokens_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: true
+            referencedRelation: "wearable_connections"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       wearable_sync_logs: {
         Row: {

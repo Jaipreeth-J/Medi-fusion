@@ -102,19 +102,20 @@ export default defineConfig(({ mode }) => ({
             },
           },
           {
-            // Cache API responses with network-first strategy
-            urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
-            handler: "NetworkFirst",
+            // Cache ONLY public avatars from Supabase storage.
+            // NEVER cache authenticated REST endpoints (/rest/v1/*), auth (/auth/v1/*), or Edge Functions (/functions/v1/*)
+            // to protect sensitive patient health data from unencrypted CacheStorage exposure.
+            urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/object\/public\/avatars\/.*/i,
+            handler: "StaleWhileRevalidate",
             options: {
-              cacheName: "supabase-api-cache",
+              cacheName: "supabase-public-avatars",
               expiration: {
                 maxEntries: 50,
-                maxAgeSeconds: 60 * 5, // 5 minutes
+                maxAgeSeconds: 60 * 60 * 24 * 7, // 7 days
               },
               cacheableResponse: {
                 statuses: [0, 200],
               },
-              networkTimeoutSeconds: 10,
             },
           },
         ],

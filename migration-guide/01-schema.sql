@@ -195,19 +195,28 @@ CREATE TABLE public.health_insights (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
--- 13. WEARABLE_CONNECTIONS
+-- 13. WEARABLE_CONNECTIONS (Client-facing connection metadata, no sensitive tokens)
 CREATE TABLE public.wearable_connections (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id uuid NOT NULL,
     provider text NOT NULL,
     provider_user_id text,
-    access_token text,
-    refresh_token text,
     token_expires_at timestamptz,
     scopes text[],
     device_info jsonb,
     is_active boolean NOT NULL DEFAULT true,
     last_sync_at timestamptz,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- 13b. WEARABLE_TOKENS (Secure, backend service-role only; never client accessible)
+CREATE TABLE public.wearable_tokens (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    connection_id uuid NOT NULL REFERENCES public.wearable_connections(id) ON DELETE CASCADE UNIQUE,
+    user_id uuid NOT NULL,
+    access_token text,
+    refresh_token text,
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );

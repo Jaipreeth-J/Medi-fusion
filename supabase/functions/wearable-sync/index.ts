@@ -92,20 +92,27 @@ const PLATFORM_APPS: Record<string, string> = {
 
 // ── Token refresh helper ──
 
-async function ensureValidToken(supabase: any, connection: any): Promise<string | null> {
-  if (!connection.access_token) return null;
+async function ensureValidToken(supabaseAdmin: any, connection: any): Promise<string | null> {
+  // Retrieve token securely from service-role-only wearable_tokens table
+  const { data: tokenRecord } = await supabaseAdmin
+    .from('wearable_tokens')
+    .select('access_token, refresh_token')
+    .eq('connection_id', connection.id)
+    .maybeSingle();
+
+  if (!tokenRecord?.access_token) return null;
 
   if (connection.token_expires_at) {
     const expiresAt = new Date(connection.token_expires_at).getTime();
     const now = Date.now();
     if (expiresAt > now + 300000) {
-      return connection.access_token;
+      return tokenRecord.access_token;
     }
   }
 
-  if (!connection.refresh_token) {
+  if (!tokenRecord.refresh_token) {
     console.warn('Token expired and no refresh token available');
-    return connection.access_token;
+    return tokenRecord.access_token;
   }
 
   console.log('Refreshing expired token for', connection.provider);
@@ -129,11 +136,11 @@ async function ensureValidToken(supabase: any, connection: any): Promise<string 
   };
 
   const prov = PROVIDERS[connection.provider];
-  if (!prov) return connection.access_token;
+  if (!prov) return tokenRecord.access_token;
 
   const clientId = prov.getClientId();
   const clientSecret = prov.getClientSecret();
-  if (!clientId || !clientSecret) return connection.access_token;
+  if (!clientId || !clientSecret) return tokenRecord.access_token;
 
   try {
     const res = await fetch(prov.tokenUrl, {
@@ -147,14 +154,14 @@ async function ensureValidToken(supabase: any, connection: any): Promise<string 
       body: new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
-        refresh_token: connection.refresh_token,
+        refresh_token: tokenRecord.refresh_token,
         grant_type: 'refresh_token',
       }),
     });
 
     if (!res.ok) {
       console.error('Token refresh failed:', await res.text());
-      await supabase.from('wearable_connections')
+      await supabaseAdmin.from('wearable_connections')
         .update({ is_active: false }).eq('id', connection.id);
       return null;
     }
@@ -164,16 +171,25 @@ async function ensureValidToken(supabase: any, connection: any): Promise<string 
       ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
       : null;
 
-    await supabase.from('wearable_connections').update({
+    // Update public connection metadata
+    await supabaseAdmin.from('wearable_connections').update({
+      token_expires_at: expiresAt,
+      is_active: true,
+    }).eq('id', connection.id);
+
+    // Update tokens in secure wearable_tokens table
+    await supabaseAdmin.from('wearable_tokens').upsert({
+      connection_id: connection.id,
+      user_id: connection.user_id,
       access_token: tokens.access_token,
       ...(tokens.refresh_token && { refresh_token: tokens.refresh_token }),
-      token_expires_at: expiresAt,
-    }).eq('id', connection.id);
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'connection_id' });
 
     return tokens.access_token;
   } catch (e) {
     console.error('Token refresh error:', e);
-    return connection.access_token;
+    return tokenRecord.access_token;
   }
 }
 
@@ -433,7 +449,7 @@ serve(async (req) => {
           sync_source_chain: { chain: buildSyncChain(dn, nativeDeviceInfo?.source_app || null, hp) },
         };
       } else {
-        const validToken = await ensureValidToken(supabase, connection);
+        const validToken = await ensureValidToken(supabaseAdmin, connection);
 
         if (!validToken && !connection.provider.includes('garmin')) {
           ({ vitals, metadata } = generateMockData(dataTypes, connection.provider, connection.device_info));

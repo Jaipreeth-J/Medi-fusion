@@ -96,6 +96,12 @@ CREATE POLICY "Users can insert own wearable connections" ON public.wearable_con
 CREATE POLICY "Users can update own wearable connections" ON public.wearable_connections FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can delete own wearable connections" ON public.wearable_connections FOR DELETE USING (auth.uid() = user_id);
 
+-- ==================== WEARABLE_TOKENS ====================
+-- Sensitive OAuth tokens are restricted exclusively to backend service_role
+ALTER TABLE public.wearable_tokens ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.wearable_tokens FROM anon, authenticated;
+-- No client policies created: all client reads/writes are denied by default
+
 -- ==================== WEARABLE_SYNC_LOGS ====================
 CREATE POLICY "Users can view own sync logs" ON public.wearable_sync_logs FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can insert own sync logs" ON public.wearable_sync_logs FOR INSERT WITH CHECK (auth.uid() = user_id);

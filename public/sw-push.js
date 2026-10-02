@@ -4,6 +4,23 @@
  * when the app is closed/backgrounded.
  */
 
+// Purge any deprecated/insecure caches (e.g., supabase-api-cache which stored health data)
+self.addEventListener("activate", (event) => {
+  const DEPRECATED_CACHES = ["supabase-api-cache"];
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter((name) => DEPRECATED_CACHES.includes(name))
+          .map((name) => {
+            console.log("[ServiceWorker] Purging deprecated insecure cache:", name);
+            return caches.delete(name);
+          })
+      );
+    })
+  );
+});
+
 // Handle incoming push notifications
 self.addEventListener("push", (event) => {
   if (!event.data) return;
