@@ -156,19 +156,19 @@ Additional engineering features include OAuth state verification, token refresh 
 │ React + TypeScript + Vite                                            │
 │ React Router + TanStack Query + Tailwind + Recharts                  │
 │                                                                      │
-│ Dashboard │ Vitals │ Symptoms │ Mood │ Medications │ AI │ Wearables │
-│     │          │         │        │        │          │       │       │
-│     └──────────┴─────────┴────────┴────────┴──────────┴───────┘       │
+│ Dashboard │ Vitals │ Symptoms │ Mood │ Medications │ AI │ Wearables  │ 
+│     │          │         │        │        │          │       │      │
+│     └──────────┴─────────┴────────┴────────┴──────────┴───────┘      │
 │                              │                                       │
-│                    Custom Hooks / Services                          │
+│                    Custom Hooks / Services                           │
 └──────────────────────────────┼───────────────────────────────────────┘
                                │
                                ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│                         Supabase                                    │
+│                         Supabase                                     │
 ├──────────────────────────────────────────────────────────────────────┤
 │ Auth │ PostgreSQL │ RLS │ Private Storage │ Edge Functions           │
-│      │            │     │                │                          │
+│      │            │     │                │                           │
 │      │            │     │                ├─ Health Chat              │
 │      │            │     │                ├─ Medical Image Analysis   │
 │      │            │     │                ├─ Prescription Scanning    │
